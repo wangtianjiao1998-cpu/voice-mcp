@@ -2120,7 +2120,7 @@ function resolveElevenLabsVoice(env: Env, input: SpeakInput): ElevenLabsVoiceSel
     ? env.ELEVENLABS_LANGUAGE_CODE_ZH || (env.ELEVENLABS_VOICE_ID_ZH ? "zh" : getElevenLabsLanguageCode(env))
     : env.ELEVENLABS_LANGUAGE_CODE_EN || (env.ELEVENLABS_VOICE_ID_EN ? "en" : getElevenLabsLanguageCode(env));
 
-  return { voiceId, language, languageCode };
+  return { voiceId: voiceId?.trim(), language, languageCode };
 }
 
 function parseOptionalNumber(value: string | undefined): number | undefined {
