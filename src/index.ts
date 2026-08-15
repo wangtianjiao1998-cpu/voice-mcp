@@ -359,11 +359,14 @@ function getPlayerHTML(botName: string): string {
       if (id !== undefined) msg.id = id;
       window.parent.postMessage(msg, '*');
     }
-    
+    let initializedSent = false;
     window.addEventListener('message', function(event) {
       const msg = event.data;
       if (!msg || typeof msg !== 'object') return;
-      
+      if (!initializedSent && msg.id === 1 && msg.result) {
+  initializedSent = true;
+  sendToHost('ui/notifications/initialized', {});
+}
       if (msg.jsonrpc === '2.0') {
         if (msg.method === 'ui/notifications/tool-input') {
           contentEl.innerHTML = '<div class="loading">Generating voice...</div>';
@@ -377,7 +380,7 @@ function getPlayerHTML(botName: string): string {
     });
     
     sendToHost('ui/initialize', { name: 'voice-mcp', version: '1.0.0' }, 1);
-    setTimeout(function() { sendToHost('ui/notifications/initialized', {}); }, 50);
+  
   </script>
 </body>
 </html>`;
