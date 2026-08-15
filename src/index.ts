@@ -253,6 +253,7 @@ function getPlayerHTML(botName: string): string {
     const BOT_NAME = '${botName}';
     let audio = null;
     let waveInterval = null;
+    let hasToolResult = false;
     const diagnosticLines = [];
 
     function objectKeys(value) {
@@ -412,7 +413,9 @@ function getPlayerHTML(botName: string): string {
 
       if (msg.jsonrpc === '2.0') {
         if (msg.method === 'ui/notifications/tool-input') {
-          contentEl.innerHTML = '<div class="loading">Generating voice...</div>';
+          if (!hasToolResult) {
+            contentEl.innerHTML = '<div class="loading">Generating voice...</div>';
+          }
         }
         if (msg.method === 'ui/notifications/tool-result') {
           const structured =
@@ -420,7 +423,10 @@ function getPlayerHTML(botName: string): string {
             msg.params?.result?.structuredContent ||
             msg.result?.structuredContent;
           addDiagnostic('postMessage tool-result structured=[' + objectKeys(structured) + ']');
-          if (structured) handleData(structured);
+          if (structured) {
+            hasToolResult = true;
+            handleData(structured);
+          }
         }
       }
       if (msg.structuredContent) handleData(msg.structuredContent);
