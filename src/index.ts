@@ -216,6 +216,16 @@ function getPlayerHTML(botName: string): string {
       border-radius: 8px;
       font-size: 13px;
     }
+    .diagnostics {
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 8px;
+      background: #f7f7f7;
+      color: #666;
+      font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
     @media (prefers-color-scheme: dark) {
       .container { background: #2c2c2c; }
       .play-btn { background: #3a3a3a; }
@@ -225,6 +235,7 @@ function getPlayerHTML(botName: string): string {
       .duration { color: #888; }
       .text-bubble { background: #3a3a3a; color: #e0e0e0; }
       .toggle-btn { color: #4cd964; }
+      .diagnostics { background: #3a3a3a; color: #aaa; }
     }
   </style>
 </head>
@@ -233,13 +244,48 @@ function getPlayerHTML(botName: string): string {
     <div id="content">
       <div class="loading">Loading...</div>
     </div>
+    <div class="diagnostics" id="diagnostics">Widget diagnostics: starting</div>
   </div>
 
   <script>
     const contentEl = document.getElementById('content');
+    const diagnosticsEl = document.getElementById('diagnostics');
     const BOT_NAME = '${botName}';
     let audio = null;
     let waveInterval = null;
+    const diagnosticLines = [];
+
+    function objectKeys(value) {
+      if (!value || typeof value !== 'object') return '-';
+      const keys = Object.keys(value).sort();
+      return keys.length ? keys.join(',') : '(none)';
+    }
+
+    function addDiagnostic(line) {
+      diagnosticLines.push(line);
+      if (diagnosticLines.length > 8) diagnosticLines.shift();
+      diagnosticsEl.textContent = diagnosticLines.join('\\n');
+    }
+
+    function hasStructuredContent(value) {
+      return Boolean(value && typeof value === 'object' && 'structuredContent' in value);
+    }
+
+    function recordShape(source, value) {
+      const method = value && typeof value.method === 'string' ? value.method : '(no method)';
+      addDiagnostic(
+        source + ' method=' + method +
+        ' top=[' + objectKeys(value) + ']' +
+        ' params=[' + objectKeys(value?.params) + ']' +
+        ' params.result=[' + objectKeys(value?.params?.result) + ']' +
+        ' result=[' + objectKeys(value?.result) + ']' +
+        ' structuredContent=' +
+        'top:' + hasStructuredContent(value) + ',' +
+        'params:' + hasStructuredContent(value?.params) + ',' +
+        'params.result:' + hasStructuredContent(value?.params?.result) + ',' +
+        'result:' + hasStructuredContent(value?.result)
+      );
+    }
     
     function escapeHtml(text) {
       const div = document.createElement('div');
@@ -359,28 +405,29 @@ function getPlayerHTML(botName: string): string {
       if (id !== undefined) msg.id = id;
       window.parent.postMessage(msg, '*');
     }
- 
     window.addEventListener('message', function(event) {
       const msg = event.data;
       if (!msg || typeof msg !== 'object') return;
-      
+      recordShape('postMessage', msg);
+
       if (msg.jsonrpc === '2.0') {
         if (msg.method === 'ui/notifications/tool-input') {
           contentEl.innerHTML = '<div class="loading">Generating voice...</div>';
         }
         if (msg.method === 'ui/notifications/tool-result') {
-   const structured =
-  msg.params?.structuredContent ||
-  msg.params?.result?.structuredContent ||
-  msg.result?.structuredContent;
+          const structured =
+            msg.params?.structuredContent ||
+            msg.params?.result?.structuredContent ||
+            msg.result?.structuredContent;
+          addDiagnostic('postMessage tool-result structured=[' + objectKeys(structured) + ']');
           if (structured) handleData(structured);
         }
       }
       if (msg.structuredContent) handleData(msg.structuredContent);
     });
-    
+
     sendToHost('ui/initialize', { name: 'voice-mcp', version: '1.0.0' }, 1);
-  setTimeout(function() { sendToHost('ui/notifications/initialized', {}); }, 50);
+    setTimeout(function() { sendToHost('ui/notifications/initialized', {}); }, 50);
   </script>
 </body>
 </html>`;
@@ -3182,3 +3229,4 @@ export default {
     return new Response('Not Found', { status: 404 });
   },
 };
+
